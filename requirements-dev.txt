@@ -1,0 +1,7 @@
+# Dev tools
+-r requirements.txt
+
+pydocstyle
+flake8
+doc8
+sphinx
