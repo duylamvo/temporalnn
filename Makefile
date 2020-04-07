@@ -11,12 +11,12 @@ clean:
 
 
 virtualenv:
-	rm -rf env/
-	virtualenv --python python3 --prompt '|> wavenet <| ' env
-	env/bin/pip install -r requirements.txt
-	env/bin/python setup.py develop
+	rm -rf venv/
+	virtualenv --python python3 --prompt '|> wavenet <| ' venv
+	venv/bin/pip install -r requirements.txt
+	venv/bin/python setup.py develop
 	@echo
-	@echo "VirtualENV Setup Complete. Now run: source env/bin/activate"
+	@echo "VirtualENV Setup Complete. Now run: source venv/bin/activate"
 	@echo
 
 test:
