@@ -48,8 +48,8 @@ from temproalnn.temporalnn.models import temporal as ts_model
 # Build A wavenet model
 wn = ts_model.WaveNet()
 model = wn.build_model(input_shape=(32, 1),
-                        n_in_steps=32,
-                        n_out_steps=1,
+                        x_steps=32,
+                        y_steps=1,
                         gated_activations=['relu', 'sigmoid'])
 
 ```
@@ -62,7 +62,7 @@ Alternatively you could do all in one for wavenet by using `ts_util.train_on_mem
 from temporalnn.temporalnn.utils import ts_util
 
 # To be fast you could train by feed every thing on memory
-ts_util.train_on_memory(X_train, y_train, X_test, y_test,
+ts_util.train(X_train, y_train, X_test, y_test,
                                 input_shape,
                                 x_steps, y_steps,
                                 weight_file, history_file, log_dir,
@@ -126,7 +126,7 @@ log_dir = output_dir + "/logs"
 weight_file = output_dir + f"/weight/uts_{x_steps}_{y_steps}.h5.{set_id}"
 history_file = output_dir + f"/history/uts_{x_steps}_{y_steps}.hist.{set_id}"
 
-ts_util.train_on_memory(X_train, y_train, X_test, y_test,
+ts_util.train(X_train, y_train, X_test, y_test,
                         input_shape,
                         x_steps, y_steps,
                         weight_file, history_file, log_dir,
