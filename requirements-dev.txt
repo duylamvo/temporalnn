@@ -6,3 +6,4 @@ flake8
 doc8
 sphinx
 wheel
+pytest

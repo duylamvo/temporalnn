@@ -1,15 +1,20 @@
-numpy
-pandas
-matplotlib
 tqdm
 pillow
-scikit-learn
 psutil
-sqlalchemy
-psycopg2-binary
-graphviz
 
-# Tensor 1.14 which is supported by conda
+# Data Engineer package
+numpy
+pandas
+psycopg2-binary
+sqlalchemy
+
+# Visualization packages
+graphviz
+matplotlib
+# Data Science Packages
 tensorflow-gpu>=1.15.2
 tensorflow>=1.15.2
 keras
+seglearn
+scikit-learn
+scikit-image
