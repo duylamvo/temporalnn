@@ -1,154 +1,303 @@
 # Temporal Neural Network And Explainable AI
 
-This is the project to use neural network to build a model for temporal data which has at least one time based dimension. This project includes 2 mains topics, temporalnn and xai. The former is one of important main generalized module while the latter is non-generalized codes but also important.
+## Introduction
+Temporalnn is to build different neural network to work with temporal data, which has at least one time based dimension. This project includes 2 mains topics. Existing block of neural network and explainable ai (xai) used to explain and validate the model.
 
-- Temporal neural network (temporalnn): module which contains blocks different kind of CNN-based model. temporalnn has also a wheel file (whl folder) which can be easy to be installed using pip:
+- Temporal Models supported
+    - pure CNN for temporal
+    - WaveNet
+    - Simple LSTM 
+- XAI model supported
+    - LIME for time series regression
 
-  - models:
-    - default CNN models
-    - contains WaveNet, one of the modern cnn-based deep learning model in this module.
-  - utils:
-    - preprocess data
-    - generate time series data set (`utils.ts_utils`)
+Among the model supported, WaveNet is the latest and most modern to support very long time steps of time series data. Additionally, temporalnn tries to combines building and explaining the structure of neural network into one tool. It is useful when you have both as a convenient tool
 
-- XAI algorithms, the second module, which seperately stored in XAI folder. The module attaches different current algorithms in explainable AI which were used to explain models built by temporalnn
-  - Local Interpretable and Model Agnostic Explaination (LIME)
-  - Other algorithms (on going)
-- wavenet: a folder storing codes where we are trying to apply the module to build a temperature forecaster based on wavenet model. This could be seen as an example of using module temporalnn to build wavenet models.
-- presentation: where we store
-
+Besides the supporting models, temporalnn also support utilities in converting time series data frame into train data both univariate and multivariate time series. 
+  
 ## Installation
-
-Create an virtualenv
+Temporalnn has already simplified the installation by using makefile. If you do not use any other virtualenv tool like conda, you can easily create one by:
 
 ```bash
 make virtualenv
-```
-
-Temporalnn is a tool that is developed by during building wavenet to handling time series data using neural network. The tool helps to build blocks of wavenet model. It supports also some transformation tools. Currently it is specific for data set with time series based on data frame of pandas. Exammple applied for dwd weather data.
-
-```bash
+make wheel
 pip install whl/temporalnn-0.0.2-py3-none-any.whl
 ```
 
-if the whl file is not there, you could generate by
+## Sample Data - DWD Climate data
 
-```bash
-make setup
-pip isntall temporalnn-0.0.2-py3-none-any.whl
-```
-
-## Build a WaveNet model for Univariate
-
-To build a wavenet model implemented in temporalnn
+Temporalnn has been built and tested on dws weather data. You could find a test data for small climate under tests/data folder. There are here also example models was built by our temporalnn Wavenet block. 
 
 ```python
-from temproalnn.temporalnn.models import temporal as ts_model
-
-# Build A wavenet model
-wn = ts_model.WaveNet()
-model = wn.build_model(input_shape=(32, 1),
-                        x_steps=32,
-                        y_steps=1,
-                        gated_activations=['relu', 'sigmoid'])
-
-```
-
-This is a model based on `keras`, hence you could apply any `model.compile(...)` and `model.fit(...)` to compile and train model. Please refer to keras api to see how to do.
-
-Alternatively you could do all in one for wavenet by using `ts_util.train_on_memory` or `ts_util.train_on_generator(.)`
-
-```python
-from temporalnn.temporalnn.utils import ts_util
-
-# To be fast you could train by feed every thing on memory
-ts_util.train(X_train, y_train, X_test, y_test,
-                                input_shape,
-                                x_steps, y_steps,
-                                weight_file, history_file, log_dir,
-                                shuffle=False,
-                                batch_size=64,
-                                validation_freq=10,
-                                max_queue_size=20,
-                                epochs=100,
-                                verbose=1,
-                                )
-# alternatively you could use ts_util.train_on_generator(.)
-# which could save more memory but bit slower.
-```
-
-## Example of Using wavenet for climate data
-
-This example codes could be found in wavenet folder
-
-```python
-from temporalnn.temporalnn.utils import ts_util
-from temproalnn.temporalnn.models import temporal as ts_model
-from temproalnn.temporalnn.utils.datasets import gen_train
-
+import json
 import pandas as pd
 
-climate_file= "data/climate/preprocessed_climate.csv"
-data = pd.read_csv(climate_file)
+with open("tests/data/climate_small_schema.json") as f:
+    schema = json.load(f)
+climate_data = pd.read_csv("tests/data/climate_small.csv")
+climate_data = climate_data.astype(schema)
 
-# columns (input features and output features from data)
-target_col = "tmk"
-indep_cols = ["tmk"]
+df = climate_data.copy()
+df.set_index("measure_date")
 
-# column to group by ~ each group is one uts
+```
+## Temporal with WaveNet
+### Generate training data
+
+You could use temporalnn to generate or convert a time-based index data frame into train and test set
+
+```python
+
+from temporalnn.utils import ts as ts_util
+df = "... Sample Data ..."
+
+df.set_index("measure_date")
+
+dependent_columns = ["fx"]
+independent_column = "tmk"
 group_col = "stations_id"
 
-# Time Steps of input, and output
+x_steps = 7
+y_steps = 2
+stride = 1
+x_train, x_test, y_train, y_test = ts_util.df_to_ts_numpy(
+    df, dependent_columns,
+    independent_column, group_col,
+    x_steps, y_steps, stride,
+    split_test=True, test_size=0.3, random_state=42)
+```
+### Build a WaveNet model for Univariate Time Series
+
+You could build a wavenet block by simply
+
+```python
+from temporalnn.models.temporal import WaveNet
+
+
+x_train, x_test, y_train, y_test = """... Previous block ..."""
 x_steps = 32
 y_steps = 1
-input_shape= (x_steps, 1)
+x_dim = 1   # uts only 1 column
+input_shape = (x_steps, x_dim)
+# Build A wavenet model
+wn = WaveNet()
+model = wn.build_model(input_shape=input_shape,
+                           x_steps=x_steps,
+                           y_steps=y_steps,
+                           gated_activations=['relu', 'sigmoid'],
+                           n_conv_filters=32)
 
-# Generate TS train data
-x_set, y_set = gen_train(data,
-                        indep_cols,
-                        target_col,
-                        group_col=group_col,
-                        x_steps=x_steps,
-                        y_steps=y_steps,
-                        stride=1)
+model.compile(optimizer='nadam',
+              loss='mse',
+              metrics=['mse', 'mae', 'mape', 'cosine'],
+              )
 
-# K-Folds
-kf = KFold(5, shuffle=True)
-folds = kf.split(y_set)
+validation_data = (x_test, y_test)
+history = model.fit(x_train, y_train,
+                    validation_data=validation_data,
+                    )
+```
+Currently our focus is to use WaveNet as a main model to apply explainable to explains different models built by WaveNet hence we has built a function to simplify training. 
 
-# To simple, test it on one fold
-train_index, test_index = folds[0]
-X_train, X_test = x_set[train_index], x_set[test_index]
-y_train, y_test = y_set[train_index], y_set[test_index]
+```python
 
-output_dir = f"test-outputs/climate/train_{x_steps}_{y_steps}"
-log_dir = output_dir + "/logs"
-weight_file = output_dir + f"/weight/uts_{x_steps}_{y_steps}.h5.{set_id}"
-history_file = output_dir + f"/history/uts_{x_steps}_{y_steps}.hist.{set_id}"
+from temporalnn.utils.ts_trainer import train
 
-ts_util.train(X_train, y_train, X_test, y_test,
-                        input_shape,
-                        x_steps, y_steps,
-                        weight_file, history_file, log_dir,
-                        shuffle=False,
-                        batch_size=64,
-                        validation_freq=10,
-                        max_queue_size=20,
-                        epochs=100,
-                        verbose=1,
-                        )
+x_train, x_test, y_train, y_test = """... Previous block ..."""
+
+# The train function has a WaveNet model built inside.
+train(x_train, y_train, x_test, y_test)
+
+# Alternative if you have alreday weight_file, or want to save weight file
+weight_file = "...path_to_output..."
+train(x_train, y_train, x_test, y_test, weight_file=weight_file)
 
 ```
 
-The project had already trained results under `wavenet_results` which will be used to apply explanable AI later in the project
+## Complete Example of Using wavenet for climate data (Univariate Time Series)
 
-## Apply Exaplanable AI to explain WaveNet Model.
+The complete example of using our simple train-test set. 
 
-### Local interpretable model-agnostic explanations (LIME)
+```python
+import json
+import os
+import pandas as pd
+from temporalnn.utils.ts_trainer import train
+from temporalnn.utils import ts as ts_util
 
-This project has implemented LIME algorithm from scratch and be able to explain both images and regression for TS models. The project was hosted seperately and here ported codes were copied to have all-in-one-place repo under folder `xai/LIME`
+with open("tests/data/climate_small_schema.json") as f:
+    schema = json.load(f)
+climate_data = pd.read_csv("tests/data/climate_small.csv")
+climate_data = climate_data.astype(schema)
 
-To test the script simply run, (but possibly need to be modified the data folder be able be loaded)
-`python lime-image.py`
+df = climate_data.copy()
+df.set_index("measure_date")
 
-The result of LIME could be found in `xai/LIME/test-outputs` or simply in our `presentation` folder
+dependent_columns = ["fx"]
+independent_column = "tmk"
+group_col = "stations_id"
+
+x_steps = 7
+y_steps = 2
+stride = 1
+x_train, x_test, y_train, y_test = ts_util.df_to_ts_numpy(
+    df, dependent_columns, independent_column, group_col,
+    x_steps, y_steps, stride,
+    split_test=True, test_size=0.3, random_state=42)
+
+weight_file = "./output_dir" + "/" + "uts_tmk_7_1.h5"
+os.makedirs(os.path.dirname(weight_file), exist_ok=True)
+train(x_train, y_train, x_test, y_test, weight_file=weight_file)
+
+```
+
+If you do not want to use only one train-test set but using KFold instead, you could use our df_to_ts_numpy we use ts_util to generate sample and data set. But you also could use KFold from `scikit-learn` to generate different KFold
+
+```python
+from temporalnn.utils import ts as ts_util
+df, dependent_columns, independent_column, group_col, x_steps, y_steps, stride = "... previous ..."
+
+x_train, y_train = ts_util.df_to_ts_numpy(
+    df, dependent_columns, independent_column, group_col,
+    x_steps, y_steps, stride, split_test=False)
+
+# Apply K-Fold here for different training-test sets
+```
+
+More examples could be found under our tests folder like [temporal-util](tests/test_temporal_utils.py)
+
+Notice that, if you want to run tests as interative console, then please correct the folder of data from "data/..." to "tests/data/..."
+
+## Explainable AI with LIME
+
+We have implemented LIME approach from scratch also for images and time series. Image classification using LIME in this project is just a demo of how LIME works. We actually use LIME to explain our time series model. Our examples could be easily found under [LIME-image](tests/test_lime_image.py) and [LIME-UTS](tests/test_lime_uts.py)
+
+### Introduction of LIME
+LIME stands for Local Interpretable and Model Agnostic Explanation. A general method to explains and validate trust of model. 
+
+The graph as follows explaining model
+```plantuml
+digraph LIME {
+    X [label="Instance X"]
+    X_segment [label="X - Segmentation"]
+    X_comma [label="X'"]
+    Z_comma [label="Sampling Neighbors Z'"]
+    Z [label="Z"]
+    F [label="f(Z)"]
+    P [label="π(x,z)"]
+    G [label="g(z') = W*Z'", color="turquoise", style="filled"]
+    L [label="Loss of f(z) ~ g(z') with weight π"]
+    O [label="Optimizer: argmin { loss }"]
+    R [label="W^ ~ Weights of features", color="turquoise", style="filled"]
+ 
+    X -> X_segment
+    X_segment -> X_comma
+    X_comma -> Z_comma
+    Z_comma -> Z
+    Z -> F
+    Z -> P [label="Similarity of x to z"]
+
+    Z_comma -> G
+    F -> L 
+    G -> L 
+    P -> L 
+    L -> O 
+    O -> R
+
+    subgraph sampling_z {
+        node [shape="box", style="dashed"]
+    
+        S [label="Sampling Neighbors Z'"]
+        A [label="Z'"]
+        B [label="Z'"]
+        C [label="Z'"]
+    
+        S -> B
+        S -> C
+        S -> A
+    }
+}
+```
+
+### Use LIME to explain univariate time series built by WaveNet
+
+We have implemented and extended LIME to be able to use with time series. You could get our example models which is built by our WaveNet block under `tests/data/uts_tmk_32_1.h5` for 32 input steps and output 1 step of value.
+
+#### Prepare data (tmk)
+```python
+import pandas as pd
+import json
+
+DATA_DIR = "tests/data"
+
+def preload_uts(data_dir=DATA_DIR):
+    df = pd.read_csv(f"{data_dir}/climate_small.csv")
+    with open(f"{data_dir}/climate_small_schema.json") as f:
+        schema = json.load(f)
+        df = df.astype(schema)
+
+    df = df.set_index("measure_date")
+    tmk = df.query("stations_id == 2074")["tmk"]
+
+    input_steps = 32
+    return tmk[-input_steps:].to_numpy()
+
+ts_original = preload_uts()
+```
+### Prepare predict function
+
+Even LIME is agnostic to any model, but we need to write correct function to return what we really care.
+Here I care about y_hat (or temperature of tommorow (tmk) in dwd weather data. The model is trained to do that). So we need to prepare our predict function to ensure returning a float number.
+
+```python
+from keras.models import load_model
+
+DATA_DIR = "tests/data"
+model = load_model(f"{DATA_DIR}/uts_tmk_32_1.h5")
+ 
+def predict_uts_tmk(x, *args):
+    _shape = x.shape
+    if len(_shape) == 2:
+        _shape = (1, _shape[0], _shape[1])
+    elif len(_shape) == 1:
+        _shape = (1, _shape[0], 1)
+    x = x.reshape(_shape)
+
+    y_hat = model.predict(x, *args)
+
+    # flatten to one value
+    return y_hat.ravel().item()
+
+```
+
+### Create an explainer for the model
+To explain Time Series, you could easily use our class LIMETimeSeries to input an instance to explain. Combining with predict function which we need to write correctly to return values of temperature. 
+
+```python
+from temporalnn.explain.lime import LIMETimeSeries
+preload_uts = """... previous ... """
+predict_uts_tmk = """... previous ... """
+
+ts_original = preload_uts()
+
+xai_uts = LIMETimeSeries(x=ts_original, predict_fn=predict_uts_tmk)
+xai_model = xai_uts.explain(on_offs=[1, 0])
+
+```
+
+### Visualization result
+We provide also tool to visualize result easily
+```python
+from temporalnn.explain.lime import LIMETimeSeries
+preload_uts = """... previous ... """
+predict_uts_tmk = """... previous ... """
+ts_original = preload_uts()
+
+xai_uts = LIMETimeSeries(x=ts_original, predict_fn=predict_uts_tmk)
+xai_model = xai_uts.explain(on_offs=[1, 0])
+
+demo_dict = xai_uts.create_demo_explanation(xai_model, top_k=3)
+xai_uts.viz_coefficient(xai_model)
+xai_uts.viz_explain(demo_dict)
+```
+
+More examples could be found under our [LIME-test-uts](tests/test_lime_uts.py)
