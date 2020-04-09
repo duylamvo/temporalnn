@@ -63,9 +63,11 @@ def test_split_train_test_ts():
     x_steps = 7
     y_steps = 2
     stride = 1
-    x_train, x_test, y_train, y_test = ts_util.df_to_ts_numpy(df, dependent_columns, independent_column, group_col,
-                                                              x_steps, y_steps, stride,
-                                                              split_test=True, test_size=0.3, random_state=42)
+    x_train, x_test, y_train, y_test = ts_util.df_to_ts_numpy(
+        df, dependent_columns,
+        independent_column, group_col,
+        x_steps, y_steps, stride,
+        split_test=True, test_size=0.3, random_state=42)
 
     assert x_train.ndim == 3 and y_train.ndim == 2
     assert x_test.ndim == 3 and y_test.ndim == 2
@@ -121,5 +123,4 @@ def test_train_and_save_model_on_wavenet(tmpdir):
     import os
     weight_file = tmpdir + "/" + "test.h5"
     train(x_train, y_train, x_test, y_test, weight_file=weight_file)
-
     assert os.path.isfile(weight_file)
