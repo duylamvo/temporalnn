@@ -2,8 +2,8 @@
 
 clean:
 	find . -name '*.py[co]' -delete
-	make -C docs clean
 	rm -rf *.lock *.dirlock worker-* build *.egg-info
+# 	make -C docs clean
 
 
 # clean-outputs:
@@ -11,12 +11,21 @@ clean:
 
 
 virtualenv:
-	rm -rf env/
-	virtualenv --python python3 --prompt '|> wavenet <| ' env
-	env/bin/pip install -r requirements.txt
-	env/bin/python setup.py develop
+	rm -rf venv/
+	virtualenv --python python3 --prompt '|> wavenet <| ' venv
+	venv/bin/pip install -r requirements.txt
+	venv/bin/python setup.py develop
 	@echo
-	@echo "VirtualENV Setup Complete. Now run: source env/bin/activate"
+	@echo "VirtualENV Setup Complete. Now run: source venv/bin/activate"
+	@echo
+
+virtualenv-dev:
+	rm -rf venv/
+	virtualenv --python python3 --prompt '|> wavenet <| ' venv
+	venv/bin/pip install -r requirements-dev.txt
+	venv/bin/python setup.py develop
+	@echo
+	@echo "VirtualENV Setup Complete. Now run: source venv/bin/activate"
 	@echo
 
 test:
