@@ -1,17 +1,3 @@
-import seglearn as sl
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import copy
-
-from datetime import timedelta
-from sklearn.linear_model import Ridge
-from sklearn.metrics import pairwise_distances
-from keras.models import load_model
-
-from temporalnn.utils.backend import tf_patch_rtx
-
-
 def viz_features(x_original, n_features=10, width=32, overlap_rate=0):
     # If plot all segments, it will become multiple time series with same width
     # However, it is hard to see, and also because the index is overlap
@@ -50,102 +36,9 @@ def viz_features(x_original, n_features=10, width=32, overlap_rate=0):
     plt.show()
 
 
-def _distance(x1, x2):
-    d = pairwise_distances(x1.reshape(1, -1),
-                           x2.reshape(1, -1))
-    return d
-
-
-def _pi(x, z, gamma=0.001):
-    # Apply gaussian radial basis function as kernel ~ RBF kernel
-    # exp(-(||x-y||² / (2*sigma²)) ~ exp(-gamma*||x-y||²))
-    #   gamma = 1/2.sigma²
-    assert x.shape == z.shape
-
-    d = _distance(x, z)
-    pi = np.exp(-gamma * d)
-
-    return pi.flatten().item()
-
-
-def _predict(x, model=None, shape=None, *args):
-    # Keras NN model needs to reshape data to expected input
-    if shape:
-        if len(shape) == 2:
-            shape = (1, shape[0], shape[1])
-        x = x.reshape(shape)
-    return model.predict(x, *args)
-
-
-def segment(x, n_features, steps_per_segment=32, overlap_rate=0.):
-    assert steps_per_segment < len(x)
-    # Given an TS x as array
-    # create segments
-    segmenter = sl.transform.SegmentX(steps_per_segment, overlap=overlap_rate)
-    segmenter.fit([x])
-
-    # Overlap_rate r, then n_segments = [len(series) / (width * (1-r))] - 1
-    #  if r = 0 ~ n_segments = len(series) / width
-    x_segments, _, _ = segmenter.transform([x])
-    return x_segments
-
-
-def neighbors(x, n_features=10, n_features_on=None, steps_per_segment=4,
-              sample_size=100, predict_fn=None, **kwargs):
-    # Segmentation X -> X'
-    x_segments = segment(x, n_features, steps_per_segment)
-    n_features = min(n_features, x_segments.shape[0])
-
-    if n_features_on is None:
-        n_features_on = np.random.randint(0, n_features)
-
-    # Dependent on overlap-rate, the number of segments can
-    #   be smaller than n_features
-
-    prob_features_on = n_features_on / n_features
-    prob_features_off = 1 - prob_features_on
-    prob = [prob_features_on, prob_features_off]
-
-    # Neighbors ---random-choose--> z'---convert-back---> z
-    samples = np.random.choice([True, False],
-                               size=(sample_size, n_features),
-                               p=prob)
-
-    samples_set = []
-    for z_comma in samples:
-        z_segments = x_segments * z_comma.reshape(n_features, 1)
-        z_original = z_segments.ravel()
-
-        # get f(z)
-        f_z = None
-        if predict_fn:
-            model = kwargs.get("model")
-            shape = kwargs.get("shape")
-            f_z = predict_fn(z_original, model, shape)
-
-        sample = (z_comma, z_original, f_z.flatten().item())
-        samples_set.append(sample)
-
-    return samples_set
-
-
-def get_top_k(weights, top_k):
-    # Select only top k features
-    sorted_idx = np.argsort(weights)
-
-    if top_k is None:
-        top_k = len(sorted_idx)
-
-    top_k_idx = sorted_idx[-top_k:]
-    return top_k_idx
 
 
 def test_main():
-    tf_patch_rtx()
-
-    N_FEATURES = 10
-    SAMPLE_SIZE = 1000
-    TOP_K = 3
     X_STEPS = 32
     STEPS_PER_SEGMENT = 4
 

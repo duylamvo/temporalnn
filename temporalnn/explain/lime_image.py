@@ -17,10 +17,10 @@ from sklearn.linear_model import Ridge
 from skimage.measure import compare_ssim
 
 
+# Todo: Convert it into markdown
 def viz_lime_theory():
     from graphviz import Digraph
 
-    # Todo: Convert it into markdown
     dot = Digraph(comment='LIME')
     dot.node(name='X', label='Instance X')
     dot.node(name='X_segment', label='X - Segmentation')
