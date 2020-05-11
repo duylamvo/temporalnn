@@ -174,7 +174,7 @@ We have implemented LIME approach from scratch also for images and time series. 
 ### Introduction of LIME
 LIME stands for Local Interpretable and Model Agnostic Explanation. A general method to explains and validate trust of model. 
 
-The graph as follows explaining model (dot language)
+The graph as follows explaining model
 ```plantuml
 digraph LIME {
     X [label="Instance X"]
@@ -188,35 +188,35 @@ digraph LIME {
     L [label="Loss of f(z) ~ g(z') with weight π"]
     O [label="Optimizer: argmin { loss }"]
     R [label="W^ ~ Weights of features", color="turquoise", style="filled"]
-    
+ 
     X -> X_segment
     X_segment -> X_comma
     X_comma -> Z_comma
     Z_comma -> Z
     Z -> F
     Z -> P [label="Similarity of x to z"]
+
     Z_comma -> G
     F -> L 
     G -> L 
     P -> L 
     L -> O 
     O -> R
-    
+
     subgraph sampling_z {
         node [shape="box", style="dashed"]
-        
+    
         S [label="Sampling Neighbors Z'"]
         A [label="Z'"]
         B [label="Z'"]
         C [label="Z'"]
-        
+    
         S -> B
         S -> C
         S -> A
     }
 }
 ```
-
 
 ### Use LIME to explain univariate time series built by WaveNet
 
