@@ -140,4 +140,4 @@ cython_debug/
 
 # Editors' files
 .idea/
-.vscode/
+.vscode/coverage-report

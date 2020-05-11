@@ -1,4 +1,5 @@
 """Test module for explanation ai implemented with LIME"""
+import os
 import pytest
 
 from skimage.io import imread
@@ -10,6 +11,8 @@ from keras.applications.imagenet_utils import decode_predictions
 from temporalnn.explain.lime import LIMEImage
 
 inet_model = inc_net.InceptionV3()
+
+DATA_DIR = "tests/data" if os.path.isdir("tests") else "data"
 
 
 def predict_inception_v3(x):
@@ -28,7 +31,7 @@ def predict_inception_v3(x):
 
 def test_explains_segmentation_and_features():
     # img = imread("tests/data/cat.jpg")
-    img = imread("data/cat.jpg")
+    img = imread(f"{DATA_DIR}/cat.jpg")
     img_original = imresize(img, (299, 299))
 
     xai_img = LIMEImage(x=img_original, predict_fn=predict_inception_v3)
@@ -38,7 +41,7 @@ def test_explains_segmentation_and_features():
 
 
 def test_explains_z_comma_set():
-    img = imresize(imread("data/cat.jpg"), (299, 299))
+    img = imresize(imread(f"{DATA_DIR}/cat.jpg"), (299, 299))
     img_original = imresize(img, (299, 299))
 
     xai_img = LIMEImage(x=img_original)
@@ -48,7 +51,7 @@ def test_explains_z_comma_set():
 
 
 def test_convert_from_z_comma_to_z_original_form():
-    img = imresize(imread("data/cat.jpg"), (299, 299))
+    img = imresize(imread(f"{DATA_DIR}/cat.jpg"), (299, 299))
 
     xai_img = LIMEImage(x=img)
     img_segmented, features = xai_img.to_features()
@@ -64,7 +67,7 @@ def test_convert_from_z_comma_to_z_original_form():
 
 
 def test_generate_sample_set():
-    img = imread("data/cat.jpg")
+    img = imread(f"{DATA_DIR}/cat.jpg")
     img = imresize(img, (299, 299))
 
     xai_img = LIMEImage(x=img, predict_fn=predict_inception_v3)
@@ -75,7 +78,7 @@ def test_generate_sample_set():
 
 
 def test_explain_model():
-    img = imread("data/cat.jpg")
+    img = imread(f"{DATA_DIR}/cat.jpg")
     img = imresize(img, (299, 299))
 
     xai_img = LIMEImage(x=img, predict_fn=predict_inception_v3)
@@ -85,7 +88,7 @@ def test_explain_model():
 
 @pytest.mark.skip("Interactive, not automatic possible.")
 def test_viz_result():
-    img = imread("tests/data/cat.jpg")
+    img = imread(f"{DATA_DIR}/cat.jpg")
     img = imresize(img, (299, 299))
 
     xai_img = LIMEImage(x=img, predict_fn=predict_inception_v3, n_features=10)
