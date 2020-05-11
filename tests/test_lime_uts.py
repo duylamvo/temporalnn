@@ -1,4 +1,5 @@
 """Test module for explanation ai implemented with LIME"""
+import os
 import pytest
 import json
 import numpy as np
@@ -7,7 +8,7 @@ import pandas as pd
 from temporalnn.explain.lime import LIMETimeSeries
 from keras.models import load_model
 
-DATA_DIR = "data"
+DATA_DIR = "tests/data" if os.path.isdir("tests") else "data"
 
 
 def preload_uts(data_dir=DATA_DIR):
@@ -102,7 +103,7 @@ def test_explain_model():
                )
 
 
-# @pytest.mark.skip("Interaction, hence skip.")
+@pytest.mark.skip("Interaction, hence skip.")
 def test_viz_of_features():
     xai_uts = LIMETimeSeries(x=ts_original, predict_fn=predict_uts_tmk)
     xai_model = xai_uts.explain(on_offs=[1, 0])

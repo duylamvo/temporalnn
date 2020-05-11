@@ -3,13 +3,17 @@
 import pandas as pd
 import json
 import numpy as np
+import os
 
 from temporalnn.utils import ts as ts_util
 from temporalnn.utils.ts_trainer import train
 
-with open("data/climate_small_schema.json") as f:
+DATA_DIR = "tests/data" if os.path.isdir("tests") else "data"
+
+with open(f"{DATA_DIR}/climate_small_schema.json") as f:
     schema = json.load(f)
-climate_data = pd.read_csv("data/climate_small.csv")
+
+climate_data = pd.read_csv(f"{DATA_DIR}/climate_small.csv")
 climate_data = climate_data.astype(schema)
 
 
@@ -34,9 +38,13 @@ def test_generate_ts_numpy_data():
     x_steps = 7
     y_steps = 2
     stride = 1
-    x_train, y_train = ts_util.df_to_ts_numpy(df, dependent_columns, independent_column, group_col,
-                                              x_steps, y_steps, stride)
-
+    test_set = ts_util.df_to_ts_numpy(df,
+                                      dependent_columns,
+                                      independent_column,
+                                      group_col,
+                                      x_steps, y_steps,
+                                      stride, split_test=False)
+    x_train, y_train = test_set
     # x should have 3 dimensions (samples, ts_steps, dimensions)
     # y should have 2 dimensions (samples, ts_steps)
     assert x_train.ndim == 3 and y_train.ndim == 2

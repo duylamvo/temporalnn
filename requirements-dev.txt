@@ -7,3 +7,4 @@ doc8
 sphinx
 wheel
 pytest
+pytest-cov

@@ -2,7 +2,8 @@
 
 clean:
 	find . -name '*.py[co]' -delete
-	rm -rf *.lock *.dirlock worker-* build *.egg-info
+	rm -rf *.lock *.dirlock worker-* build *.egg-info .pytest_* coverage-report .coverage*
+
 # 	make -C docs clean
 
 
@@ -35,7 +36,7 @@ test:
 	@echo
 	python -m pytest \
 		-v \
-		--cov=daish \
+		--cov=temporalnn \
 		--cov-report=term \
 		--cov-report=html:coverage-report \
 		tests/
