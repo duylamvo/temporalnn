@@ -12,20 +12,20 @@ import multiprocessing as mp
 np.set_printoptions(suppress=True)
 
 
-def df_to_ts_numpy(data, x_cols, y_col, group_col,
-                   x_steps=7, y_steps=1, stride=1,
+def df_to_ts_numpy(data, independents, dependent, group_col=None,
+                   n_in_steps=7, n_out_steps=1, stride=1,
                    split_test=True, **kwargs):
     """Convert a pandas data frame to time series numpy for training.
 
     :param data: (pandas.DataFrame) data frame which already has index as time-based.
         If it is not yet set, please use df.set_index(time_col) to make sure that is time series
         data frame.
-    :param x_cols: (list of str) Dependent Dimensions y ~ AX + b
-    :param y_col: (str) independent variable.
+    :param independents: (list of str) independent Dimensions y ~ AX + b
+    :param dependent: (str) dependent variable.
     :param group_col: (str) a group is a categorical variable in multivariate time series. That breaks a
         a data frame into multi multivariate time series.
-    :param x_steps: (int) input steps t for sliding.
-    :param y_steps: (int) out put steps t for estimation. For example, if we want to estimate the output
+    :param n_in_steps: (int) input steps t for sliding.
+    :param n_out_steps: (int) out put steps t for estimation. For example, if we want to estimate the output
         of next 2 days weather based on 7-days previous data, then x_steps = 7, and y_steps = 2
     :param stride: (int) stride is to how sliding windows jump to next window. For example after 7 days,
         in stead of slide to next window, it will jump to position of 7 + stride to capture input and output.
@@ -35,14 +35,18 @@ def df_to_ts_numpy(data, x_cols, y_col, group_col,
     """
     pool = mp.Pool(mp.cpu_count())
     queues = []
-    if isinstance(x_cols, str):
-        x_cols = [x_cols]
-    for group, _ts in data.groupby(group_col):
-        in_dep_data = _ts[x_cols]
-        dep_data = _ts[y_col]
+    if isinstance(independents, str):
+        independents = [independents]
 
-        args = [in_dep_data, dep_data, x_steps, y_steps, stride]
-        queues.append(pool.apply_async(_generate_time_series_train_set, args))
+    if group_col is None:
+        group_col = "group"
+        data[group_col] = 1
+        for group, _ts in data.groupby(group_col):
+            in_dep_data = _ts[independents]
+            dep_data = _ts[dependent]
+
+            args = [in_dep_data, dep_data, n_in_steps, n_out_steps, stride]
+            queues.append(pool.apply_async(_generate_time_series_train_set, args))
 
     _X = []
     _Y = []
@@ -55,7 +59,7 @@ def df_to_ts_numpy(data, x_cols, y_col, group_col,
     if not len(_X):
         raise ValueError("No sample are generated")
     _shape = _X[0].shape
-    _expected_shape = (x_steps, len(x_cols))
+    _expected_shape = (n_in_steps, len(independents))
     assert _shape == _expected_shape, \
         "Shape {} does not match {}".format(_shape, _expected_shape)
     assert len(_X) == len(_Y)
@@ -68,6 +72,37 @@ def df_to_ts_numpy(data, x_cols, y_col, group_col,
         return train_test_split(x_data, y_data, **kwargs)
     else:
         return x_data, y_data
+
+
+def _generate_time_series_train_set(x_data, y_data, x_steps=7, y_steps=1, stride=1):
+    x_size = len(x_data.index)
+    y_size = len(y_data.index)
+
+    assert x_size == y_size
+
+    _inputs = []
+    _outputs = []
+    if x_size > x_steps + y_steps + 1:
+        i = 0
+        while True:
+            _x_start = i * stride
+            _x_end = _x_start + x_steps
+            _y_start = _x_end
+            _y_end = _x_end + y_steps
+
+            if _y_end > x_size:
+                _y_end = x_size
+                _y_start = x_size - y_steps
+                _x_end = _y_start
+                _x_start = _x_end - x_steps
+
+            _inputs.append(x_data[_x_start:_x_end].to_numpy())
+            _outputs.append(y_data[_y_start:_y_end].to_numpy())
+
+            if _y_end == x_size:
+                break
+            i = i + 1
+    return _inputs, _outputs
 
 
 def save_numpy_ts(data, file_path=None):
@@ -284,37 +319,6 @@ def get_steps_per_epoch(df, group_col, x_steps, y_steps, batch_size=0, stride=1)
     steps_per_epoch = (total_samples // batch_size // stride) + 1
 
     return steps_per_epoch
-
-
-def _generate_time_series_train_set(x_data, y_data, x_steps=7, y_steps=1, stride=1):
-    x_size = len(x_data.index)
-    y_size = len(y_data.index)
-
-    assert x_size == y_size
-
-    _inputs = []
-    _outputs = []
-    if x_size > x_steps + y_steps + 1:
-        i = 0
-        while True:
-            _x_start = i * stride
-            _x_end = _x_start + x_steps
-            _y_start = _x_end
-            _y_end = _x_end + y_steps
-
-            if _y_end > x_size:
-                _y_end = x_size
-                _y_start = x_size - y_steps
-                _x_end = _y_start
-                _x_start = _x_end - x_steps
-
-            _inputs.append(x_data[_x_start:_x_end].to_numpy())
-            _outputs.append(y_data[_y_start:_y_end].to_numpy())
-
-            if _y_end == x_size:
-                break
-            i = i + 1
-    return _inputs, _outputs
 
 
 def to_batch(walks, train_df, group_col, indep_cols, dep_col):

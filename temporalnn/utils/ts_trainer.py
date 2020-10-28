@@ -66,7 +66,7 @@ def train_on_generator(batches, input_shape, x_steps, y_steps,
 
 def train(x_train, y_train, x_test, y_test,
           # input_shape=None, x_steps=None, y_steps=None,
-          weight_file=None, history_file=None,
+          model_file=None, history_file=None,
           log_dir=None, **kwargs
           ):
     wn = ts_model.WaveNet()
@@ -74,7 +74,7 @@ def train(x_train, y_train, x_test, y_test,
     # Extract input shape
 
     assert isinstance(x_train, np.ndarray) and x_train.ndim == 3
-    assert isinstance(y_train, np.ndarray) and y_train.ndim == 2    # Todo support multi-dim output?
+    assert isinstance(y_train, np.ndarray) and y_train.ndim == 2  # Todo support multi-dim output?
     _, x_steps, x_dims = x_train.shape
     _, y_steps = y_train.shape
     input_shape = (x_steps, x_dims)
@@ -84,15 +84,12 @@ def train(x_train, y_train, x_test, y_test,
                            y_steps=y_steps,
                            gated_activations=['relu', 'sigmoid'],
                            n_conv_filters=32)
-    if weight_file:
-        if os.path.isfile(weight_file):
-            model.load_weights(weight_file)
     log_dir = log_dir or tempfile.mkdtemp()
     os.makedirs(log_dir, exist_ok=True)
 
     # Train
     early_stopper = EarlyStopping(monitor='loss',
-                                  min_delta=0.01 or kwargs.get("min_delta"),
+                                  min_delta=0.001 or kwargs.get("min_delta"),
                                   patience=10 or kwargs.get("patience"),
                                   verbose=1 or kwargs.get("verbose"),
                                   mode='auto' or kwargs.get("mode"))
@@ -104,13 +101,9 @@ def train(x_train, y_train, x_test, y_test,
                                   patience=5 or kwargs.get("patience"),
                                   min_lr=0.0001 or kwargs.get("min_lr"))
 
-    # Root mean square error - which not defined in keras
-    def rmse(y_true, y_pred):
-        return K.sqrt(K.mean(K.square(y_pred - y_true)))
-
     model.compile(optimizer='nadam',
-                  loss=rmse,
-                  metrics=['mse', 'mae', 'mape', 'cosine'],
+                  loss='mae',
+                  metrics=['mse', 'mae', 'mape'],
                   )
     validation_data = (x_test, y_test)
     history = model.fit(x_train, y_train,
@@ -118,8 +111,8 @@ def train(x_train, y_train, x_test, y_test,
                         callbacks=[early_stopper, tensor_brd, reduce_lr],
                         **kwargs)
 
-    if weight_file:
-        model.save_weights(weight_file)
+    if model_file:
+        model.save(model_file)
     if history_file:
         with open(history_file, 'wb') as f:
             pickle.dump(history.history, f)
