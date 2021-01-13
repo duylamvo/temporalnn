@@ -84,7 +84,7 @@ prepare-dbvis:
 	-unzip data/climate.zip /data
 	-tar -xf data/data.tar.xz
 
-wheel:
+wheel: clean
 	python setup.py bdist_wheel -d whl
 
 # ! git add remote origin https://github.com/dungthuapps/mts-cnn-xai.git

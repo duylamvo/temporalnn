@@ -3,7 +3,9 @@ from setuptools import find_packages, setup
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-packages = find_packages(where=".", exclude=("tests*",))
+packages = find_packages(   # all folder with __init__.py as packages
+    exclude=("tests*",)
+    )
 package_dir = {'': 'temporalnn'}
 setup(
     name="temporalnn",
